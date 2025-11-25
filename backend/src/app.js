@@ -18,7 +18,8 @@ app.use(cors());
 app.use(express.json());
 
 // Define the path for custom images (project-root/public/images)
-const imageDir = path.join(__dirname, '../../public/images');
+// Using path.resolve to match the logic in db.js
+const imageDir = path.resolve(__dirname, '../../public/images');
 
 // Ensure the directory exists
 if (!fs.existsSync(imageDir)) {
@@ -28,6 +29,8 @@ if (!fs.existsSync(imageDir)) {
     } catch (err) {
         console.error(`Failed to create directory ${imageDir}:`, err);
     }
+} else {
+    console.log(`Serving images from: ${imageDir}`);
 }
 
 // Serve static images from project-root/public/images

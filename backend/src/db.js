@@ -20,7 +20,9 @@ const getAvatarUrl = (name, stars, country, keywords) => {
             const imageDir = path.resolve(__dirname, '../../public/images');
             if (fs.existsSync(imageDir)) {
                 localImageCache = fs.readdirSync(imageDir);
+                console.log(`[DB] Loaded ${localImageCache.length} images from ${imageDir}`);
             } else {
+                console.log(`[DB] Image directory not found at ${imageDir}`);
                 localImageCache = [];
             }
         }
@@ -30,7 +32,8 @@ const getAvatarUrl = (name, stars, country, keywords) => {
             // Files are typically named like "0060_曹操_1.jpg"
             const match = localImageCache.find(f => f.includes(name));
             if (match) {
-                return `/api/images/${match}`;
+                // Encode the filename to handle Chinese characters in URLs properly
+                return `/api/images/${encodeURIComponent(match)}`;
             }
         }
     } catch (e) {
