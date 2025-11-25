@@ -14,30 +14,40 @@ let localImageCache = null;
 // Helper: Generate Koei-style Avatar URL based on attributes
 const getAvatarUrl = (name, stars, country, keywords) => {
     // 0. Check Local Custom Image (Project Root / public / images)
-    // Path: backend/src/../../public/images -> root/public/images
     try {
         const imageDir = path.resolve(__dirname, '../../public/images');
         
-        // Reload cache if it's null or empty (to ensure we catch files added late or if init failed)
+        // Load cache if empty
         if (!localImageCache || localImageCache.length === 0) {
             if (fs.existsSync(imageDir)) {
                 localImageCache = fs.readdirSync(imageDir);
-                console.log(`[DB] Loaded ${localImageCache.length} images from ${imageDir}`);
+                console.log(`[DB] Image Cache Loaded: ${localImageCache.length} files from ${imageDir}`);
             } else {
-                // Only log this once or if really missing
-                if (localImageCache === null) console.log(`[DB] Image directory not found at ${imageDir}`);
+                console.log(`[DB] Image directory not found at ${imageDir}`);
                 localImageCache = [];
             }
         }
 
         if (localImageCache && localImageCache.length > 0) {
-            // Normalize name for matching (NFC for standard composition)
-            const normalizedName = name.normalize('NFC');
+            const normalizedName = name.trim().normalize('NFC');
             
-            // Find a file that contains the general's name
-            // Files are typically named like "0060_曹操_1.jpg" or "1002_关羽_1.jpg"
-            // We use normalize() on the filename as well to ensure CJK characters match correctly
-            const match = localImageCache.find(f => f.normalize('NFC').includes(normalizedName));
+            // Find a file that matches the general's name
+            // Format is typically: "id_name_index.jpg" (e.g. 0002_关羽_1.jpg)
+            const match = localImageCache.find(f => {
+                const fName = f.normalize('NFC');
+                
+                // Quick check: filename must contain the name
+                if (!fName.includes(normalizedName)) return false;
+                
+                // Strict check: Split by '_' and ensure one part equals the name exactly
+                // This handles "0002_关羽_1.jpg" matching "关羽" correctly
+                const parts = fName.split('_');
+                return parts.some(part => {
+                    // Remove extension if it's the last part (e.g. "关羽.jpg")
+                    const cleanPart = part.replace(/\.[^/.]+$/, "");
+                    return cleanPart === normalizedName;
+                });
+            });
             
             if (match) {
                 console.log(`[DB] Found local image for ${name}: ${match}`);
@@ -46,10 +56,10 @@ const getAvatarUrl = (name, stars, country, keywords) => {
             }
         }
     } catch (e) {
-        console.error('Error checking local images:', e);
+        console.error('[DB] Error checking local images:', e);
     }
 
-    // 1. Country Theme Colors & Atmosphere
+    // 1. Country Theme Colors & Atmosphere (Fallback to AI)
     let theme = '';
     switch(country) {
         case '魏': 
