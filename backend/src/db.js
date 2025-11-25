@@ -16,22 +16,31 @@ const getAvatarUrl = (name, stars, country, keywords) => {
     // 0. Check Local Custom Image (Project Root / public / images)
     // Path: backend/src/../../public/images -> root/public/images
     try {
-        if (localImageCache === null) {
-            const imageDir = path.resolve(__dirname, '../../public/images');
+        const imageDir = path.resolve(__dirname, '../../public/images');
+        
+        // Reload cache if it's null or empty (to ensure we catch files added late or if init failed)
+        if (!localImageCache || localImageCache.length === 0) {
             if (fs.existsSync(imageDir)) {
                 localImageCache = fs.readdirSync(imageDir);
                 console.log(`[DB] Loaded ${localImageCache.length} images from ${imageDir}`);
             } else {
-                console.log(`[DB] Image directory not found at ${imageDir}`);
+                // Only log this once or if really missing
+                if (localImageCache === null) console.log(`[DB] Image directory not found at ${imageDir}`);
                 localImageCache = [];
             }
         }
 
-        if (localImageCache.length > 0) {
+        if (localImageCache && localImageCache.length > 0) {
+            // Normalize name for matching (NFC for standard composition)
+            const normalizedName = name.normalize('NFC');
+            
             // Find a file that contains the general's name
-            // Files are typically named like "0060_曹操_1.jpg"
-            const match = localImageCache.find(f => f.includes(name));
+            // Files are typically named like "0060_曹操_1.jpg" or "1002_关羽_1.jpg"
+            // We use normalize() on the filename as well to ensure CJK characters match correctly
+            const match = localImageCache.find(f => f.normalize('NFC').includes(normalizedName));
+            
             if (match) {
+                console.log(`[DB] Found local image for ${name}: ${match}`);
                 // Encode the filename to handle Chinese characters in URLs properly
                 return `/api/images/${encodeURIComponent(match)}`;
             }
